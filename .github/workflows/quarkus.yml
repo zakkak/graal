@@ -25,8 +25,17 @@ env:
 
 jobs:
   build-mandrel:
-    name: Mandrel build
+    name: Mandrel build - ${{ matrix.jdk }}
     runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: ['OpenJDK11-latest-GA', 'OpenJDK11-latest-EA']
+        include:
+          - jdk: 'OpenJDK11-latest-GA'
+            release_type: 'ga'
+          - jdk: 'OpenJDK11-latest-EA'
+            release_type: 'ea'
     steps:
     - uses: actions/checkout@v1
       with:
@@ -51,8 +60,8 @@ jobs:
           ${{ runner.os }}-mx-
     - name: Get openJDK11 with static libs
       run: |
-        curl -sL https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.9%2B1/OpenJDK11U-jdk_x64_linux_11.0.9_1_ea.tar.gz -o jdk.tar.gz
-        curl -sL https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.9%2B1/OpenJDK11U-static-libs_x64_linux_11.0.9_1_ea.tar.gz -o jdk-static-libs.tar.gz
+        curl -sL https://api.adoptopenjdk.net/v3/binary/latest/11/${{ matrix.release_type }}/linux/x64/jdk/hotspot/normal/openjdk -o jdk.tar.gz
+        curl -sL https://api.adoptopenjdk.net/v3/binary/latest/11/${{ matrix.release_type }}/linux/x64/staticlibs/hotspot/normal/openjdk -o jdk-static-libs.tar.gz
         mkdir -p ${JAVA_HOME}
         tar xf jdk.tar.gz -C ${JAVA_HOME} --strip-components=1
         tar xf jdk-static-libs.tar.gz -C ${JAVA_HOME} --strip-components=1
@@ -63,27 +72,26 @@ jobs:
         cd ${{ github.workspace }}/../mandrel-packaging
         ${JAVA_HOME}/bin/java -ea build.java --mx-home ${MX_HOME} --mandrel-repo ${MANDREL_REPO} --mandrel-home ${MANDREL_HOME} --archive-suffix tar.gz
         ${MANDREL_HOME}/bin/native-image --version
-        mv mandrel-java11-linux-amd64-*.tar.gz ${{ github.workspace }}/mandreljdk.tgz
+        mv mandrel-java11-linux-amd64-*.tar.gz ${{ github.workspace }}/mandreljdk-${{ matrix.jdk }}.tgz
     - name: Persist Mandrel build
       uses: actions/upload-artifact@v2
       with:
-        name: mandreljdk
-        path: mandreljdk.tgz
+        name: mandreljdk-${{ matrix.jdk }}
+        path: mandreljdk-${{ matrix.jdk }}.tgz
 
   build-quarkus:
-    name: ${{ matrix.category }} build
+    name: Quarkus ${{ matrix.quarkus-name }} build - ${{ matrix.jdk }}
     runs-on: ubuntu-18.04
     needs: build-mandrel
     strategy:
       matrix:
-        category: [quarkus-release, quarkus-master]
+        jdk: ['OpenJDK11-latest-GA', 'OpenJDK11-latest-EA']
+        quarkus-name: [release, master]
         include:
-          - category: quarkus-release
+          - quarkus-name: release
             quarkus-version: $(curl https://repo1.maven.org/maven2/io/quarkus/quarkus-bom/maven-metadata.xml | awk -F"[<>]" '/latest/ {print $3}')
-            quarkus-name: release
-          - category: quarkus-master
+          - quarkus-name: master
             quarkus-version: master
-            quarkus-name: master
     steps:
     - name: Get quarkus
       run: |
@@ -93,36 +101,36 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-${{ matrix.quarkus-name }}-maven-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-${{ matrix.quarkus-version }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.quarkus-name }}-maven-
+          ${{ runner.os }}-${{ matrix.quarkus-version }}-maven-
     - name: Download Mandrel build
       uses: actions/download-artifact@v1
       with:
-        name: mandreljdk
+        name: mandreljdk-${{ matrix.jdk }}
         path: .
     - name: Extract Mandrel build
       shell: bash
-      run: tar -xzvf mandreljdk.tgz -C ~
+      run: tar -xzvf mandreljdk-${{ matrix.jdk }}.tgz -C ~
     - name: Build quarkus
       run: |
         export JAVA_HOME="${HOME}/mandrelvm"
         cd ${GITHUB_WORKSPACE}/quarkus
-        mvn -e -B -DskipTests -DskipITs -Dno-format -DskipDocs clean install
+        mvn -e -B --settings .github/mvn-settings.xml -DskipTests -DskipITs -Dno-format -DskipDocs clean install
     - name: Tar Maven Repo
       shell: bash
-      run: tar -czvf maven-repo-${{ matrix.quarkus-name }}.tgz -C ~ .m2/repository
+      run: tar -czvf maven-repo-${{ matrix.quarkus-name }}-${{ matrix.jdk }}.tgz -C ~ .m2/repository
     - name: Persist Maven Repo
       uses: actions/upload-artifact@v2
       with:
-        name: maven-repo-${{ matrix.quarkus-name }}
-        path: maven-repo-${{ matrix.quarkus-name }}.tgz
+        name: maven-repo-${{ matrix.quarkus-name }}-${{ matrix.jdk }}
+        path: maven-repo-${{ matrix.quarkus-name }}-${{ matrix.jdk }}.tgz
     - name: Delete Local Artifacts From Cache
       shell: bash
       run: rm -r ~/.m2/repository/io/quarkus
 
   native-tests:
-    name: ${{matrix.quarkus-name}} - ${{matrix.category}}
+    name: ${{matrix.quarkus-name}} - ${{matrix.category}} - ${{ matrix.jdk }}
     needs:
       - build-mandrel
       - build-quarkus
@@ -132,6 +140,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        jdk: ['OpenJDK11-latest-GA', 'OpenJDK11-latest-EA']
         quarkus-name: [release, master]
         category: [Main, Data1, Data2, Data3, Data4, Data5, Data6, Security1, Security2, Security3, Amazon, Messaging, Cache, HTTP, Misc1, Misc2, Misc3, Misc4, Spring, gRPC]
         include:
@@ -219,7 +228,7 @@ jobs:
               kafka-streams
               reactive-messaging-amqp
           - category: Security1
-            timeout: 50
+            timeout: 75
             keycloak: "true"
             test-modules: >
               elytron-security-oauth2
@@ -295,7 +304,7 @@ jobs:
               logging-json
               jaxp
           - category: Spring
-            timeout: 50
+            timeout: 75
             test-modules: >
               spring-di
               spring-web
@@ -377,19 +386,19 @@ jobs:
       - name: Download Maven Repo
         uses: actions/download-artifact@v1
         with:
-          name: maven-repo-${{ matrix.quarkus-name }}
+          name: maven-repo-${{ matrix.quarkus-name }}-${{ matrix.jdk }}
           path: .
       - name: Extract Maven Repo
         shell: bash
-        run: tar -xzvf maven-repo-${{ matrix.quarkus-name }}.tgz -C ~
+        run: tar -xzvf maven-repo-${{ matrix.quarkus-name }}-${{ matrix.jdk }}.tgz -C ~
       - name: Download Mandrel build
         uses: actions/download-artifact@v1
         with:
-          name: mandreljdk
+          name: mandreljdk-${{ matrix.jdk }}
           path: .
       - name: Extract Mandrel build
         shell: bash
-        run: tar -xzvf mandreljdk.tgz -C ~
+        run: tar -xzvf mandreljdk-${{ matrix.jdk }}.tgz -C ~
       - name: Get quarkus
         run: |
           curl --output quarkus.tgz -sL https://api.github.com/repos/quarkusio/quarkus/tarball/${{ matrix.quarkus-version }}

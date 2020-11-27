@@ -24,6 +24,8 @@
  */
 package com.oracle.svm.graal.isolated;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
@@ -48,6 +50,40 @@ public final class IsolatedSpeculationLog extends IsolatedObjectProxy<Speculatio
         super(logHandle);
     }
 
+    static final MethodHandle unencodedGroupIdHandle;
+    static final MethodHandle unencodedContextHandle;
+    static final MethodHandle encodedGroupIdHandle;
+    static final MethodHandle encodedContextHandle;
+
+    static {
+        MethodHandle unencodedGroupIdHandleLocal = null;
+        MethodHandle unencodedContextHandleLocal = null;
+        MethodHandle encodedGroupIdHandleLocal = null;
+        MethodHandle encodedContextHandleLocal = null;
+        try {
+            Class<?> klass = UnencodedSpeculationReason.class;
+            Field groupIdField = klass.getDeclaredField("groupId");
+            Field contextField = klass.getDeclaredField("context");
+            groupIdField.setAccessible(true);
+            contextField.setAccessible(true);
+            unencodedGroupIdHandleLocal = MethodHandles.lookup().unreflectGetter(groupIdField);
+            unencodedContextHandleLocal = MethodHandles.lookup().unreflectGetter(contextField);
+            klass = Class.forName("jdk.vm.ci.meta.EncodedSpeculationReason");
+            groupIdField = klass.getDeclaredField("groupId");
+            contextField = klass.getDeclaredField("context");
+            groupIdField.setAccessible(true);
+            contextField.setAccessible(true);
+            encodedGroupIdHandleLocal = MethodHandles.lookup().unreflectGetter(groupIdField);
+            encodedContextHandleLocal = MethodHandles.lookup().unreflectGetter(contextField);
+        } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        unencodedGroupIdHandle = unencodedGroupIdHandleLocal;
+        unencodedContextHandle = unencodedContextHandleLocal;
+        encodedGroupIdHandle = encodedGroupIdHandleLocal;
+        encodedContextHandle = encodedContextHandleLocal;
+    }
+
     @Override
     public void collectFailedSpeculations() {
         collectFailedSpeculations0(IsolatedCompileContext.get().getClient(), handle);
@@ -57,28 +93,21 @@ public final class IsolatedSpeculationLog extends IsolatedObjectProxy<Speculatio
         int groupId = 0;
         Object[] context = null;
         try {
-            final Field groupIdField;
-            final Field contextField;
             /*
              * The following reflective accesses do not add runtime overhead as they are being
              * converted to direct accesses during image building. Maintaining two separate paths
-             * that invoke {@code getDeclaredField} ensures that the analysis will be able to
-             * optimize the reflective accesses and convert them to direct ones.
+             * that invoke {@link Class.getDeclaredField} in combination of the use of {@link
+             * MethodHandles} ensures that the analysis will be able to optimize the reflective
+             * accesses and convert them to direct ones.
              */
             if (reason instanceof UnencodedSpeculationReason) {
-                final Class<?> klass = UnencodedSpeculationReason.class;
-                groupIdField = klass.getDeclaredField("groupId");
-                contextField = klass.getDeclaredField("context");
+                groupId = (int) unencodedGroupIdHandle.invoke(reason);
+                context = (Object[]) unencodedContextHandle.invoke(reason);
             } else {
-                final Class<?> klass = Class.forName("jdk.vm.ci.meta.EncodedSpeculationReason");
-                groupIdField = klass.getDeclaredField("groupId");
-                contextField = klass.getDeclaredField("context");
+                groupId = (int) encodedGroupIdHandle.invoke(reason);
+                context = (Object[]) encodedContextHandle.invoke(reason);
             }
-            groupIdField.setAccessible(true);
-            groupId = groupIdField.getInt(reason);
-            contextField.setAccessible(true);
-            context = (Object[]) contextField.get(reason);
-        } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+        } catch (Throwable e) {
             VMError.shouldNotReachHere("Failed to encode speculation reason", e);
         }
         IsolatedSpeculationReasonEncoding encoding = encode(groupId, context);

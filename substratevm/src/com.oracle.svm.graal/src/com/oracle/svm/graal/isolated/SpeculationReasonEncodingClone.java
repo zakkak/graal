@@ -28,7 +28,14 @@ import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.ResolvedJavaType;
 
-/** Copied from {@code jdk.vm.ci.hotspot.HotSpotSpeculationEncoding.SpeculationReasonEncoding}. */
+/**
+ * Copied from {@link jdk.vm.ci.hotspot.HotSpotSpeculationEncoding.SpeculationReasonEncoding} to
+ * make GraalVM build with upstream OpenJDK 11 where the interface has not been backported.
+ * The interface is implemented by {@link com.oracle.svm.graal.isolated.IsolatedSpeculationReasonEncoding} and is used by
+ * {@link com.oracle.svm.graal.isolated.IsolatedSpeculationLog#encode(int, Object[])} to encode the speculation reason.
+ *
+ * @see com.oracle.svm.graal.isolated.IsolatedSpeculationLog#encodeAsByteArray(jdk.vm.ci.meta.SpeculationLog.SpeculationReason)
+ */
 public interface SpeculationReasonEncodingClone {
     void addByte(int value);
 

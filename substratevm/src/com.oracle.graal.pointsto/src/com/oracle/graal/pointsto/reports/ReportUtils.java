@@ -72,13 +72,15 @@ public class ReportUtils {
      * @param name the name of the report
      * @param extension the extension of the report
      * @param reporter a consumer that writes to a PrintWriter
+     * @return file name for the report
      */
-    public static void report(String description, String path, String name, String extension, Consumer<PrintWriter> reporter) {
+    public static String report(String description, String path, String name, String extension, Consumer<PrintWriter> reporter) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         String timeStamp = LocalDateTime.now().format(formatter);
         Path reportDir = Paths.get(path);
         String fileName = name + "_" + timeStamp + "." + extension;
         reportImpl(description, reportDir, fileName, reporter);
+        return fileName;
     }
 
     /**

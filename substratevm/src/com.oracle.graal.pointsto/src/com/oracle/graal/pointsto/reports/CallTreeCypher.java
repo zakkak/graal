@@ -84,33 +84,40 @@ public class CallTreeCypher {
 
     private static void printCypher(String vmFileName, String methodsFileName, String virtualMethodsFileName, String entryPointsFileName, String directEdgesFileName, String overridenByEdgesFileName, String virtualEdgesFileName, PrintWriter writer) {
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", vmFileName));
-        writer.println("MERGE (v:VM {vmId: row.Id, name: row.Name});");
-
+        writer.println("MERGE (v:VM {vmId: row.Id, name: row.Name})");
+        writer.println("RETURN count(v);");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", methodsFileName));
-        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, package: row.Package, parameters: row.Parameters, return: row.Return});");
-
+        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, package: row.Package, parameters: row.Parameters, return: row.Return})");
+        writer.println("RETURN count(m);");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", virtualMethodsFileName));
-        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, package: row.Package, parameters: row.Parameters, return: row.Return});");
-
+        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, package: row.Package, parameters: row.Parameters, return: row.Return})");
+        writer.println("RETURN count(m);");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", entryPointsFileName));
         writer.println("MATCH (m:Method {methodId: row.Id})");
         writer.println("MATCH (v:VM {vmId: '0'})");
-        writer.println("MERGE (v)-[:ENTRY]->(m);");
-
+        writer.println("MERGE (v)-[:ENTRY]->(m)");
+        writer.println("RETURN count(*);");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", directEdgesFileName));
         writer.println("MATCH (m1:Method {methodId: row.StartId})");
         writer.println("MATCH (m2:Method {methodId: row.EndId})");
-        writer.println("MERGE (m1)-[:DIRECT {bci: row.BytecodeIndexes}]->(m2);");
-
+        writer.println("MERGE (m1)-[:DIRECT {bci: row.BytecodeIndexes}]->(m2)");
+        writer.println("RETURN count(*);");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", overridenByEdgesFileName));
         writer.println("MATCH (m1:Method {methodId: row.StartId})");
         writer.println("MATCH (m2:Method {methodId: row.EndId})");
-        writer.println("MERGE (m1)-[:OVERRIDEN_BY]->(m2);");
-
+        writer.println("MERGE (m1)-[:OVERRIDEN_BY]->(m2)");
+        writer.println("RETURN count(*);");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", virtualEdgesFileName));
         writer.println("MATCH (m1:Method {methodId: row.StartId})");
         writer.println("MATCH (m2:Method {methodId: row.EndId})");
-        writer.println("MERGE (m1)-[:VIRTUAL {bci: row.BytecodeIndexes}]->(m2);");
+        writer.println("MERGE (m1)-[:VIRTUAL {bci: row.BytecodeIndexes}]->(m2)");
+        writer.println("RETURN count(*);");
     }
 
     private static void printVMEntryPoint(PrintWriter writer) {

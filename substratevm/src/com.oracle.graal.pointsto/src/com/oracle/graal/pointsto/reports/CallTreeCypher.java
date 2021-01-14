@@ -83,6 +83,9 @@ public class CallTreeCypher {
     }
 
     private static void printCypher(String vmFileName, String methodsFileName, String virtualMethodsFileName, String entryPointsFileName, String directEdgesFileName, String overridenByEdgesFileName, String virtualEdgesFileName, PrintWriter writer) {
+        writer.println("CREATE CONSTRAINT unique_vm_id ON (v:VM) ASSERT v.vmId IS UNIQUE;");
+        writer.println("CREATE CONSTRAINT unique_method_id ON (m:Method) ASSERT m.methodId IS UNIQUE;");
+        writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", vmFileName));
         writer.println("MERGE (v:VM {vmId: row.Id, name: row.Name})");
         writer.println("RETURN count(v);");

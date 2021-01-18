@@ -6,7 +6,9 @@ import com.oracle.graal.pointsto.reports.CallTreePrinter.InvokeNode;
 import com.oracle.graal.pointsto.reports.CallTreePrinter.MethodNode;
 import com.oracle.graal.pointsto.reports.CallTreePrinter.MethodNodeReference;
 import com.oracle.graal.pointsto.reports.CallTreePrinter.Node;
+import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
+import jdk.vm.ci.meta.ResolvedJavaType;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -21,12 +23,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class CallTreeCypher {
 
     private static final AtomicInteger virtualNodeId = new AtomicInteger(-1);
+    public static final Pattern DISPLAY_PATTERN = Pattern.compile(
+            "\\b[a-zA-Z]|[A-Z]|\\."
+    );
 
     public static void print(BigBang bigbang, String path, String reportName) {
         // Re-initialize method ids back to 0 to better diagnose disparities
@@ -91,11 +99,11 @@ public class CallTreeCypher {
         writer.println("RETURN count(v);");
         writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", methodsFileName));
-        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, type: row.Type, parameters: row.Parameters, return: row.Return})");
+        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, type: row.Type, parameters: row.Parameters, return: row.Return, display: row.Display})");
         writer.println("RETURN count(m);");
         writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", virtualMethodsFileName));
-        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, type: row.Type, parameters: row.Parameters, return: row.Return})");
+        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, type: row.Type, parameters: row.Parameters, return: row.Return, display: row.Display})");
         writer.println("RETURN count(m);");
         writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", entryPointsFileName));
@@ -152,7 +160,7 @@ public class CallTreeCypher {
     }
 
     private static void printMethodNodes(Collection<MethodNode> methods, PrintWriter writer) {
-        writer.println(convertToCSV("Id", "Name", "Type", "Parameters", "Return"));
+        writer.println(convertToCSV("Id", "Name", "Type", "Parameters", "Return", "Display"));
         methods.stream()
                 .map(CallTreeCypher::methodNodeInfo)
                 .map(CallTreeCypher::convertToCSV)
@@ -189,7 +197,7 @@ public class CallTreeCypher {
     }
 
     private static void printVirtualNodes(Map<List<String>, Integer> virtualNodes, PrintWriter writer) {
-        writer.println(convertToCSV("Id", "Name", "Type", "Parameters", "Return"));
+        writer.println(convertToCSV("Id", "Name", "Type", "Parameters", "Return", "Display"));
         virtualNodes.entrySet().stream()
                 .map(CallTreeCypher::virtualMethodAndIdInfo)
                 .map(CallTreeCypher::convertToCSV)
@@ -266,8 +274,25 @@ public class CallTreeCypher {
                 method.getName(),
                 method.getDeclaringClass().toJavaName(true),
                 parameters,
-                method.getSignature().getReturnType(null).toJavaName(true)
+                method.getSignature().getReturnType(null).toJavaName(true),
+                display(method)
         );
+    }
+
+    private static String display(ResolvedJavaMethod method) {
+        final ResolvedJavaType type = method.getDeclaringClass();
+        final String typeName = type.toJavaName(true);
+        if (type.getJavaKind() == JavaKind.Object) {
+            List<String> matchResults = new ArrayList<>();
+            Matcher matcher = DISPLAY_PATTERN.matcher(typeName);
+            while (matcher.find()) {
+                matchResults.add(matcher.toMatchResult().group());
+            }
+
+            return String.join("", matchResults) + "." + method.getName();
+        }
+
+        return typeName + "." + method.getName();
     }
 
     private static String convertToCSV(String... data) {

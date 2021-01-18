@@ -91,11 +91,11 @@ public class CallTreeCypher {
         writer.println("RETURN count(v);");
         writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", methodsFileName));
-        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, package: row.Package, parameters: row.Parameters, return: row.Return})");
+        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, type: row.Type, parameters: row.Parameters, return: row.Return})");
         writer.println("RETURN count(m);");
         writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", virtualMethodsFileName));
-        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, package: row.Package, parameters: row.Parameters, return: row.Return})");
+        writer.println("MERGE (m:Method {methodId: row.Id, name: row.Name, type: row.Type, parameters: row.Parameters, return: row.Return})");
         writer.println("RETURN count(m);");
         writer.println("");
         writer.println(String.format("LOAD CSV WITH HEADERS FROM 'file:///%s' AS row", entryPointsFileName));
@@ -152,7 +152,7 @@ public class CallTreeCypher {
     }
 
     private static void printMethodNodes(Collection<MethodNode> methods, PrintWriter writer) {
-        writer.println(convertToCSV("Id", "Name", "Package", "Parameters", "Return"));
+        writer.println(convertToCSV("Id", "Name", "Type", "Parameters", "Return"));
         methods.stream()
                 .map(CallTreeCypher::methodNodeInfo)
                 .map(CallTreeCypher::convertToCSV)
@@ -189,7 +189,7 @@ public class CallTreeCypher {
     }
 
     private static void printVirtualNodes(Map<List<String>, Integer> virtualNodes, PrintWriter writer) {
-        writer.println(convertToCSV("Id", "Name", "Package", "Parameters", "Return"));
+        writer.println(convertToCSV("Id", "Name", "Type", "Parameters", "Return"));
         virtualNodes.entrySet().stream()
                 .map(CallTreeCypher::virtualMethodAndIdInfo)
                 .map(CallTreeCypher::convertToCSV)

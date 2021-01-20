@@ -35,7 +35,7 @@ import java.awt.GraphicsEnvironment;
 import java.io.FilenameFilter;
 import java.util.function.BooleanSupplier;
 
-@Platforms(Platform.LINUX.class)
+@Platforms(Platform.LINUX_AMD64.class)
 @SuppressWarnings({"static-method", "unused"})
 public final class JavaAWTSubstitutions {
     // Checkstyle: stop

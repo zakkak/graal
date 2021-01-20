@@ -74,9 +74,6 @@ public class JNIRegistrationAwt extends JNIRegistrationUtil implements Feature {
                             clazz(access, "com.sun.imageio.plugins.jpeg.JPEGImageReader"),
                             clazz(access, "com.sun.imageio.plugins.jpeg.JPEGImageWriter"));
 
-            access.registerReachabilityHandler(JNIRegistrationAwt::registerColorProfiles,
-                            clazz(access, "java.awt.color.ICC_Profile"));
-
             access.registerReachabilityHandler(JNIRegistrationAwt::registerFlavorMapProps,
                             clazz(access, "java.awt.datatransfer.SystemFlavorMap"));
 

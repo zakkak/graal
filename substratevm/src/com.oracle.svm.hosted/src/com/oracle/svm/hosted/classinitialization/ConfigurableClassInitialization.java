@@ -358,8 +358,12 @@ public class ConfigurableClassInitialization implements ClassInitializationSuppo
         }
     }
 
-    private static String classInitializationTrace(Class<?> clazz) {
-        return getTraceString(initializedClasses.get(clazz));
+    public static String classInitializationTrace(Class<?> clazz) {
+        if(initializedClasses.containsKey(clazz)) {
+            return getTraceString(initializedClasses.get(clazz));
+        }else {
+            return null;
+        }
     }
 
     private static String getTraceString(StackTraceElement[] trace) {

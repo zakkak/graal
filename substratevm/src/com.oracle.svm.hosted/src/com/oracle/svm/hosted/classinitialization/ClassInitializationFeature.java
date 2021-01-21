@@ -30,8 +30,10 @@ import static com.oracle.svm.hosted.classinitialization.InitKind.RUN_TIME;
 import static com.oracle.svm.hosted.classinitialization.InitKind.SEPARATOR;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -283,6 +285,7 @@ public class ClassInitializationFeature implements GraalFeature {
      * that belong to it.
      */
     private void reportMethodInitializationInfo(String path) {
+        List<String> tracedInit=new ArrayList();
         for (InitKind kind : InitKind.values()) {
             Set<Class<?>> classes = classInitializationSupport.classesWithKind(kind);
             ReportUtils.report(classes.size() + " classes of type " + kind, path, kind.toString().toLowerCase() + "_classes", "txt",
@@ -290,7 +293,14 @@ public class ClassInitializationFeature implements GraalFeature {
                                             .map(Class::getTypeName)
                                             .sorted()
                                             .forEach(writer::println));
+            for(Class c: classes){
+                String trace =ConfigurableClassInitialization.classInitializationTrace(c);
+                if(trace!=null){
+                    tracedInit.add(trace);
+                }
+            }
         }
+        tracedInit.forEach(s->System.out.println(s));
     }
 
     private static boolean isRelevantForPrinting(AnalysisType type) {

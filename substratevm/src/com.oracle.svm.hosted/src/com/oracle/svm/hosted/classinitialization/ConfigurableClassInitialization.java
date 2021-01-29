@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import jdk.vm.ci.code.TargetDescription;
 import org.graalvm.compiler.serviceprovider.GraalUnsafeAccess;
 
 import com.oracle.graal.pointsto.constraints.UnsupportedFeatures;
@@ -53,6 +54,7 @@ import com.oracle.svm.hosted.c.GraalAccess;
 
 import jdk.vm.ci.meta.MetaAccessProvider;
 import jdk.vm.ci.meta.ResolvedJavaType;
+import org.graalvm.compiler.word.Word;
 import sun.misc.Unsafe;
 
 /**
@@ -358,10 +360,18 @@ public class ConfigurableClassInitialization implements ClassInitializationSuppo
         }
     }
 
+    public String objectInstantiationTrace(Object obj) {
+        if (isObjectInstantiationForClassTracked(obj.getClass()) && instantiatedObjects.containsKey(obj)) {
+            return objectInstantiationTraceMessage(obj, "");
+        } else {
+            return null;
+        }
+    }
+
     public static String classInitializationTrace(Class<?> clazz) {
-        if(initializedClasses.containsKey(clazz)) {
-            return getTraceString(initializedClasses.get(clazz));
-        }else {
+        if ( initializedClasses.containsKey(clazz) ) {
+            return getTraceString( initializedClasses.get(clazz) );
+        } else {
             return null;
         }
     }

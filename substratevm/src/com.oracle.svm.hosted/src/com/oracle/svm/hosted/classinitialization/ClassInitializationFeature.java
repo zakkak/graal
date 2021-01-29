@@ -183,15 +183,22 @@ public class ClassInitializationFeature implements GraalFeature {
          * Note that computeInitKind also memoizes the class as InitKind.BUILD_TIME, which means
          * that the user cannot later manually register it as RERUN or RUN_TIME.
          */
-        if (obj != null && classInitializationSupport.shouldInitializeAtRuntime(obj.getClass())) {
-            String msg = "No instances of " + obj.getClass().getTypeName() + " are allowed in the image heap as this class should be initialized at image runtime.";
-            msg += classInitializationSupport.objectInstantiationTraceMessage(obj,
-                            " To fix the issue mark " + obj.getClass().getTypeName() + " for build-time initialization with " +
-                                            SubstrateOptionsParser.commandArgument(ClassInitializationFeature.Options.ClassInitialization, obj.getClass().getTypeName(), "initialize-at-build-time") +
-                                            " or use the the information from the trace to find the culprit and " +
-                                            SubstrateOptionsParser.commandArgument(ClassInitializationFeature.Options.ClassInitialization, "<culprit>", "initialize-at-run-time") +
-                                            " to prevent its instantiation.\n");
-            throw new UnsupportedFeatureException(msg);
+        if (obj != null) {
+            if (classInitializationSupport.shouldInitializeAtRuntime(obj.getClass())) {
+                String msg = "No instances of " + obj.getClass().getTypeName() + " are allowed in the image heap as this class should be initialized at image runtime.";
+                msg += classInitializationSupport.objectInstantiationTraceMessage(obj,
+                        " To fix the issue mark " + obj.getClass().getTypeName() + " for build-time initialization with " +
+                                SubstrateOptionsParser.commandArgument(ClassInitializationFeature.Options.ClassInitialization, obj.getClass().getTypeName(), "initialize-at-build-time") +
+                                " or use the the information from the trace to find the culprit and " +
+                                SubstrateOptionsParser.commandArgument(ClassInitializationFeature.Options.ClassInitialization, "<culprit>", "initialize-at-run-time") +
+                                " to prevent its instantiation.\n");
+                throw new UnsupportedFeatureException(msg);
+            } else {
+                final String msg = classInitializationSupport.objectInstantiationTrace(obj);
+                if (msg != null) {
+                    System.out.println(msg);
+                }
+            }
         }
         return obj;
     }
@@ -285,7 +292,7 @@ public class ClassInitializationFeature implements GraalFeature {
      * that belong to it.
      */
     private void reportMethodInitializationInfo(String path) {
-        List<String> tracedInit=new ArrayList();
+        List<String> tracedInit = new ArrayList<>();
         for (InitKind kind : InitKind.values()) {
             Set<Class<?>> classes = classInitializationSupport.classesWithKind(kind);
             ReportUtils.report(classes.size() + " classes of type " + kind, path, kind.toString().toLowerCase() + "_classes", "txt",
@@ -293,9 +300,9 @@ public class ClassInitializationFeature implements GraalFeature {
                                             .map(Class::getTypeName)
                                             .sorted()
                                             .forEach(writer::println));
-            for(Class c: classes){
-                String trace =ConfigurableClassInitialization.classInitializationTrace(c);
-                if(trace!=null){
+            for (Class c: classes) {
+                String trace = ConfigurableClassInitialization.classInitializationTrace(c);
+                if (trace != null) {
                     tracedInit.add(trace);
                 }
             }

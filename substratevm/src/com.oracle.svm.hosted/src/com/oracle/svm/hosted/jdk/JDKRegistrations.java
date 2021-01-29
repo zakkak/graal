@@ -48,4 +48,9 @@ class JDKRegistrations extends JNIRegistrationUtil implements GraalFeature {
             rerunClassInit(a, "java.lang.ProcessImpl", "java.lang.ProcessHandleImpl", "java.lang.ProcessHandleImpl$Info", "java.io.FilePermission");
         }
     }
+
+//    @Override
+//    public void beforeAnalysis(BeforeAnalysisAccess access) {
+//        rerunClassInit(access, "sun.java2d.cmm.lcms.LCMS");
+//    }
 }

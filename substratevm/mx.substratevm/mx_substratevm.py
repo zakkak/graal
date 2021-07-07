@@ -1060,6 +1060,8 @@ def debuginfotest(args, config=None):
     parsed = parser.parse_args(masked_args)
     output_path = unmask(parsed.output_path)[0]
     build_only = parsed.build_only
+    if config is None:
+        config = GraalVMConfig.build(native_images=['native-image'], components=['Native Image'])
     native_image_context_run(
         lambda native_image, a:
             _debuginfotest(native_image, output_path, build_only, a), unmask(parsed.image_args),

@@ -946,6 +946,7 @@ suite = {
             "annotationProcessors": [
                 "compiler:GRAAL_PROCESSOR",
             ],
+            "defaultBuild": False,
         },
 
         "com.oracle.svm.configure": {
@@ -1246,6 +1247,7 @@ suite = {
             "distDependencies": [
                 "SVM",
             ],
+            "defaultBuild": False,
         },
 
         #

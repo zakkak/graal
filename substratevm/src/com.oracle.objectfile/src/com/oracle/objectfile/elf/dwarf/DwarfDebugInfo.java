@@ -170,7 +170,7 @@ public class DwarfDebugInfo extends DebugInfoBase {
     @SuppressWarnings("unused") public static final int DW_FORM_block1 = 0x0a;
     @SuppressWarnings("unused") public static final int DW_FORM_ref1 = 0x11;
     @SuppressWarnings("unused") public static final int DW_FORM_ref2 = 0x12;
-    public static final int DW_FORM_ref4 = 0x13;
+    @SuppressWarnings("unused") public static final int DW_FORM_ref4 = 0x13;
     @SuppressWarnings("unused") public static final int DW_FORM_ref8 = 0x14;
     public static final int DW_FORM_ref_addr = 0x10;
     public static final int DW_FORM_data1 = 0x0b;
@@ -457,6 +457,10 @@ public class DwarfDebugInfo extends DebugInfoBase {
          * Map from method names to info section index for the field declaration.
          */
         private HashMap<String, Integer> methodDeclarationIndex;
+        /**
+         * Map from method names to info section index for the field declaration.
+         */
+        private HashMap<String, Integer> abstractInlineMethodIndex;
 
         DwarfClassProperties(StructureTypeEntry entry) {
             super(entry);
@@ -469,6 +473,7 @@ public class DwarfDebugInfo extends DebugInfoBase {
             this.lineSectionSize = -1;
             fieldDeclarationIndex = null;
             methodDeclarationIndex = null;
+            abstractInlineMethodIndex = null;
         }
     }
 
@@ -720,5 +725,30 @@ public class DwarfDebugInfo extends DebugInfoBase {
         assert methodDeclarationIndex != null;
         assert methodDeclarationIndex.get(methodName) != null;
         return methodDeclarationIndex.get(methodName);
+    }
+
+    public void setAbstractInlineMethodIndex(ClassEntry classEntry, String methodName, int pos) {
+        DwarfClassProperties classProperties;
+        classProperties = lookupClassProperties(classEntry);
+        assert classProperties.getTypeEntry() == classEntry;
+        HashMap<String, Integer> abstractInlineMethodIndex = classProperties.abstractInlineMethodIndex;
+        if (abstractInlineMethodIndex == null) {
+            classProperties.abstractInlineMethodIndex = abstractInlineMethodIndex = new HashMap<>();
+        }
+        if (abstractInlineMethodIndex.get(methodName) != null) {
+            assert abstractInlineMethodIndex.get(methodName) == pos : classEntry.getTypeName() + methodName;
+        } else {
+            abstractInlineMethodIndex.put(methodName, pos);
+        }
+    }
+
+    public int getAbstractInlineMethodIndex(ClassEntry classEntry, String methodName) {
+        DwarfClassProperties classProperties;
+        classProperties = lookupClassProperties(classEntry);
+        assert classProperties.getTypeEntry() == classEntry;
+        HashMap<String, Integer> abstractInlineMethodIndex = classProperties.abstractInlineMethodIndex;
+        assert abstractInlineMethodIndex != null : classEntry.getTypeName() + methodName;
+        assert abstractInlineMethodIndex.get(methodName) != null : classEntry.getTypeName() + methodName;
+        return abstractInlineMethodIndex.get(methodName);
     }
 }
